@@ -1,0 +1,18 @@
+{
+    "name": "AMLTToken",
+    "version": "1.0.0",
+    "description": "",
+    "author": "",
+    "homepage": "",
+    "scripts": {
+        "deploy-private": "truffle --network private migrate --reset",
+        "deploy-ropsten": "truffle --network ropsten migrate --reset",
+        "deploy-mainnet": "truffle --network mainnet migrate --reset"
+    },
+    "dependencies": {},
+    "keywords": [],
+    "devDependencies": {
+        "ethereumjs-abi": "^0.6.4",
+        "ethereumjs-util": "^5.1.2"
+    }
+}
