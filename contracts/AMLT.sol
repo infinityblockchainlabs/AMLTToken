@@ -2,10 +2,18 @@ pragma solidity ^0.4.11;
 
 import './lib/SafeMath.sol';
 import './AMLTInterface.sol';
+import './AMLTAdminInterface.sol';
 
 contract AMLT is AMLTInterface {
 
     using SafeMath for uint;
+
+    AMLTAdminInterface public adminContract;
+
+    modifier onlyOperator() {
+        require(adminContract.operatorList(msg.sender));
+        _;
+    }
 
     /**
      * Constructor
@@ -13,11 +21,13 @@ contract AMLT is AMLTInterface {
      * @param _crowdsale The address of crowdsale pool
      * @param _remaining The address of remaining pool
      */
-    function AMLT(address _presale, address _crowdsale, address _remaining)
+    function AMLT(address _adminContract, address _presale, address _crowdsale, address _remaining)
     {
         balanceOf[_presale] = 0;
         balanceOf[_crowdsale] = 0;
         balanceOf[_remaining] = 0;
+
+        adminContract = AMLTAdminInterface(_adminContract);
     }
 
     /**

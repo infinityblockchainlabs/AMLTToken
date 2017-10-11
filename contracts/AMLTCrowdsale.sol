@@ -1,10 +1,15 @@
 pragma solidity ^0.4.11;
 
+import './lib/SafeMath.sol';
 import './AMLTCrowdsaleInterface.sol';
 import './AMLTAdminInterface.sol';
+import './AMLTInterface.sol';
 
 contract AMLTCrowdsale is AMLTCrowdsaleInterface {
 
+    using SafeMath for uint;
+
+    AMLTInterface public amltContract;
     AMLTAdminInterface public adminContract;
 
     modifier onlyOperator() {
@@ -25,7 +30,7 @@ contract AMLTCrowdsale is AMLTCrowdsaleInterface {
      * @param _fundingEndBlock Crowdsale end block
      * @param _tokenCrowdsalePool Pool contain tokens is sold in crowdsale
      */
-    function AMLTCrowdsale(address _amltMultiSig, address _adminContract, uint _fundingStartBlock, uint _fundingEndBlock, uint _tokenCrowdsalePool)
+    function AMLTCrowdsale(address _amltMultiSig, address _amltContract, address _adminContract, uint _fundingStartBlock, uint _fundingEndBlock, uint _tokenCrowdsalePool)
     {
         assert(_fundingStartBlock > block.number);
         assert(_fundingStartBlock < _fundingEndBlock);
@@ -36,6 +41,7 @@ contract AMLTCrowdsale is AMLTCrowdsaleInterface {
         tokenCrowdsalePool = _tokenCrowdsalePool;
 
         amltMultiSig = _amltMultiSig;
+        amltContract = AMLTInterface(_amltContract);
         adminContract = AMLTAdminInterface(_adminContract);
     }
 
@@ -59,6 +65,11 @@ contract AMLTCrowdsale is AMLTCrowdsaleInterface {
             numTokens = tokenCrowdsalePool;
         }
 
+        if (buyers[totalBuyers] == 0) {
+            buyers[totalBuyers++] = sender;
+        }
+
+        amount[sender] = amount[sender].add(numTokens);
         tokenCrowdsalePool -= numTokens;
         LogBuyToken(sender, value, numTokens, tokenPrice);
 
@@ -128,6 +139,18 @@ contract AMLTCrowdsale is AMLTCrowdsaleInterface {
     }
 
     /**
+     * @dev Change AMLT contract
+     * @param _amltContract The new address of AMLTAdmin contract
+     */
+    function changeAMLTContract(address _amltContract)
+        onlyMultiSigWallet
+        public
+    {
+        amltContract = AMLTInterface(_amltContract);
+        LogChangeAMLTContract(_amltContract);
+    }
+
+    /**
      * @dev Change AMLTAdmin contract
      * @param _adminContract The new address of AMLTAdmin contract
      */
@@ -150,11 +173,47 @@ contract AMLTCrowdsale is AMLTCrowdsaleInterface {
         assert(amltMultiSig.send(this.balance));
     }
 
-    
+    function refund(address _buyer)
+        onlyOperator
+        public
+        returns (bool success)
+    {
+        uint numTokens = amount[_buyer];
 
+        if (numTokens == 0) {
+            return false;
+        }
 
+        amount[_buyer] = 0;
+        tokenCrowdsalePool = tokenCrowdsalePool.add(numTokens);
+        assert(_buyer.send(numTokens * tokenPrice));
+        return true;
+    }
 
-    
+    function payoutToken()
+        public
+    {
+        // uint current = currentPayoutIndex;
+        // uint len = totalBuyers;
+        // uint count = 0;
 
-    
+        // address tmpAddr;
+        // uint tmpAmount;
+
+        // for (uint i = current; count < 20 && i < len; i++) {
+        //     tmpAddr = qsdb1.affiliates(i);
+        //     tmpAmount = qsdb1.amount(tmpAddr);
+
+        //     if (!amlt.transfer(buyers[], tmpAmount)) {
+        //         throw;
+        //     }
+
+        //     count++;
+        // }
+
+        // if (count != 0) {
+        //     currentDistributedIndex = current + count;
+        // }
+    }
+
 }
