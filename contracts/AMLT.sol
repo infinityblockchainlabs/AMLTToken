@@ -17,6 +17,7 @@ contract AMLT is AMLTInterface {
 
     /**
      * Constructor
+     * @param _adminContract The address of AMLTAdmin contract
      * @param _presale The address of presale pool
      * @param _crowdsale The address of crowdsale pool
      * @param _remaining The address of remaining pool
@@ -205,6 +206,18 @@ contract AMLT is AMLTInterface {
         returns (bool inNetworkMemberList)
     {
         return networkMemberList[_account];
+    }
+
+    /**
+     * @dev Change AMLTAdmin contract
+     * @param _adminContract The new address of AMLTAdmin contract
+     */
+    function changeAMLTAdminContract(address _adminContract)
+        onlyMultiSigWallet
+        public
+    {
+        adminContract = AMLTAdminInterface(_adminContract);
+        LogChangeAMLTAdminContract(_adminContract);
     }
 
 }

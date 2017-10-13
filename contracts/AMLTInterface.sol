@@ -25,10 +25,10 @@ contract AMLTInterface is AMLTEvents {
     mapping(address => mapping(address => uint)) internal allowed;
 
     // List of account have registered KYC
-    mapping(address => bool) public whiteList;
+    mapping(address => bool) internal whiteList;
 
     // List of account have obtained the status of Network Member
-    mapping(address => bool) public networkMemberList;
+    mapping(address => bool) internal networkMemberList;
 
     function transfer(address _to, uint _value) public returns (bool success);
     function transferFrom(address _from, address _to, uint _value) public returns (bool success);

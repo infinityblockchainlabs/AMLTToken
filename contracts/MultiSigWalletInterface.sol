@@ -40,5 +40,9 @@ contract MultiSigWalletInterface is MultiSigWalletEvents {
     function executeTransaction(uint _transactionId) public;
     function isConfirmed(uint _transactionId) public constant returns (bool);
     function getOwners() public constant returns (address[]);
+    function getConfirmationCount(uint _transactionId) public constant returns (uint count);
+    function getTransactionCount(bool _pending, bool _executed) public constant returns (uint count);
+    function getConfirmations(uint _transactionId) public constant returns (address[] _confirmations);
+    function getTransactionIds(uint _from, uint _to, bool _pending, bool _executed) public constant returns (uint[] _transactionIds);
 
 }

@@ -290,4 +290,100 @@ contract MultiSigWallet is MultiSigWalletInterface {
         return owners;
     }
 
+    /**
+	 * @dev Returns number of confirmations of a transaction
+	 * @param _transactionId Transaction ID
+     * @return Number of confirmations
+	 */
+    function getConfirmationCount(uint _transactionId)
+        public
+        constant
+        returns (uint count)
+    {
+        uint len = owners.length;
+
+        for (uint i = 0; i < len; i++) {
+            if (confirmations[_transactionId][owners[i]]) {
+                count += 1;
+            }
+        }
+    }
+
+    /**
+	 * @dev Returns total number of transactions after filters are applied
+	 * @param _pending Include pending transactionss
+     * @param _executed Include executed transactions
+     * @return Total number of transactions after filters are applied
+	 */
+    function getTransactionCount(bool _pending, bool _executed)
+        public
+        constant
+        returns (uint count)
+    {
+        for (uint i = 0; i < transactionCount; i++) {
+            if (_pending && !transactions[i].executed || _executed && transactions[i].executed) {
+                count += 1;
+            }
+        }
+    }
+
+    /**
+	 * @dev Returns array with owner addresses, which confirmed transaction
+	 * @param _transactionId Transaction ID
+     * @return Returns array of owner addresses
+	 */
+    function getConfirmations(uint _transactionId)
+        public
+        constant
+        returns (address[] _confirmations)
+    {
+        address[] memory confirmationsTemp = new address[](owners.length);
+        uint count = 0;
+        uint i;
+
+        for (i = 0; i < owners.length; i++) {
+            if (confirmations[_transactionId][owners[i]]) {
+                confirmationsTemp[count] = owners[i];
+                count += 1;
+            }
+        }
+
+        _confirmations = new address[](count);
+
+        for (i = 0; i < count; i++) {
+            _confirmations[i] = confirmationsTemp[i];
+        }
+    }
+
+    /**
+	 * @dev Returns list of transaction IDs in defined range
+	 * @param _from Index start position of transaction array
+     * @param _to Index end position of transaction array
+     * @param _pending Include pending transactions
+     * @param _executed Include executed transactions
+     * @return Returns array of transaction IDs
+	 */
+    function getTransactionIds(uint _from, uint _to, bool _pending, bool _executed)
+        public
+        constant
+        returns (uint[] _transactionIds)
+    {
+        uint[] memory transactionIdsTemp = new uint[](transactionCount);
+        uint count = 0;
+        uint i;
+
+        for (i = 0; i < transactionCount; i++) {
+            if (_pending && !transactions[i].executed || _executed && transactions[i].executed) {
+                transactionIdsTemp[count] = i;
+                count += 1;
+            }
+        }
+
+        _transactionIds = new uint[](_to - _from);
+        
+        for (i = _from; i < _to; i++) {
+            _transactionIds[i - _from] = transactionIdsTemp[i];
+        }
+    }
+
 }
