@@ -2,33 +2,22 @@ pragma solidity ^0.4.11;
 
 import './lib/SafeMath.sol';
 import './AMLTInterface.sol';
-import './AMLTAdminInterface.sol';
 
 contract AMLT is AMLTInterface {
 
     using SafeMath for uint;
 
-    AMLTAdminInterface public adminContract;
-
-    modifier onlyOperator() {
-        require(adminContract.operatorList(msg.sender));
-        _;
-    }
-
     /**
      * Constructor
-     * @param _adminContract The address of AMLTAdmin contract
      * @param _presale The address of presale pool
      * @param _crowdsale The address of crowdsale pool
      * @param _remaining The address of remaining pool
      */
-    function AMLT(address _adminContract, address _presale, address _crowdsale, address _remaining)
+    function AMLT(address _presale, address _crowdsale, address _remaining)
     {
         balanceOf[_presale] = 0;
         balanceOf[_crowdsale] = 0;
         balanceOf[_remaining] = 0;
-
-        adminContract = AMLTAdminInterface(_adminContract);
     }
 
     /**
@@ -108,116 +97,6 @@ contract AMLT is AMLTInterface {
         returns (uint remaining)
     {
         return allowed[_owner][_spender];
-    }
-
-    /**
-     * @dev Add new account to whitelist
-     * @param _account The address of new account
-     */
-    function addAccount(address _account)
-        public
-        onlyOperator
-        returns (bool success)
-    {
-        if (whiteList[_account]) {
-            return false;
-        }
-
-        whiteList[_account] = true;
-        AddAccount(_account);
-        return true;
-    }
-
-    /**
-     * @dev Remove account get out whitelist
-     * @param _account The _account address which want to remove
-     */
-    function removeAccount(address _account)
-        public
-        onlyOperator
-        returns (bool success)
-    {
-        if (!whiteList[_account]) {
-            return false;
-        }
-
-        whiteList[_account] = false;
-        RemoveAccount(_account);
-        return true;
-    }
-
-    /**
-     * @dev Verify account in whitelist
-     * @param _account The account address which want to verify
-     * @return True if _account is in whitelist
-     */
-    function verifyAccount(address _account)
-        public
-        constant
-        returns (bool inWhitelist)
-    {
-        return whiteList[_account];    
-    }
-
-    /**
-     * @dev Add new account to Network Member list
-     * @param _account The address of new account
-     */
-    function addNetworkMember(address _account)
-        public
-        onlyOperator
-        returns (bool success)
-    {
-        if (networkMemberList[_account]) {
-            return false;
-        }
-
-        networkMemberList[_account] = true;
-        AddNetworkMember(_account);
-        return true;
-    }
-
-    /**
-     * @dev Remove account get out list of Network Member
-     * @param _account The _account address which want to remove
-     */
-    function removeNetworkMember(address _account)
-        public
-        onlyOperator
-        returns (bool success)
-    {
-        if (!networkMemberList[_account]) {
-            return false;
-        }
-
-        networkMemberList[_account] = false;
-        RemoveNetworkMember(_account);
-        return true;
-    }
-
-    /**
-     * @dev Verify account in Network Member list
-     * @param _account The account address which want to verify
-     * @return True if _account is in Network Member list
-     */
-    function verifyNetworkMember(address _account)
-        public
-        constant
-        returns (bool inNetworkMemberList)
-    {
-        return networkMemberList[_account];
-    }
-
-    /**
-     * @dev Change AMLTAdmin contract
-     * @param _adminContract The new address of AMLTAdmin contract
-     */
-    function changeAMLTAdminContract(address _adminContract)
-        onlyMultiSigWallet
-        public
-    {
-        adminContract = AMLTAdminInterface(_adminContract);
-        LogChangeAMLTAdminContract(_adminContract);
     }
 
 }
