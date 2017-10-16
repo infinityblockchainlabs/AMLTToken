@@ -9,8 +9,8 @@ contract AMLTCrowdsale is AMLTCrowdsaleInterface {
 
     using SafeMath for uint;
 
-    AMLTInterface public amltContract;
     AMLTAdminInterface public adminContract;
+    AMLTInterface public amltContract;
 
     modifier onlyOperator() {
         require(adminContract.operatorList(msg.sender));
@@ -18,19 +18,19 @@ contract AMLTCrowdsale is AMLTCrowdsaleInterface {
     }
 
     modifier onlyMultiSigWallet() {
-        require(msg.sender == amltMultiSig);
+        require(msg.sender == adminContract.amltMultiSig());
         _;
     }
 
     /**
      * @dev Constructor
-     * @param _amltMultiSig The address of MultiSig Wallet contract
      * @param _adminContract The address of AMLTAdmin contract
+     * @param _amltContract The address of AMLT contract
 	 * @param _fundingStartBlock Crowdsale start block
      * @param _fundingEndBlock Crowdsale end block
      * @param _tokenCrowdsalePool Pool contain tokens is sold in crowdsale
      */
-    function AMLTCrowdsale(address _amltMultiSig, address _amltContract, address _adminContract, uint _fundingStartBlock, uint _fundingEndBlock, uint _tokenCrowdsalePool)
+    function AMLTCrowdsale(address _adminContract, address _amltContract, uint _fundingStartBlock, uint _fundingEndBlock, uint _tokenCrowdsalePool)
     {
         assert(_fundingStartBlock > block.number);
         assert(_fundingStartBlock < _fundingEndBlock);
@@ -40,71 +40,8 @@ contract AMLTCrowdsale is AMLTCrowdsaleInterface {
 
         tokenCrowdsalePool = _tokenCrowdsalePool;
 
-        amltMultiSig = _amltMultiSig;
-        amltContract = AMLTInterface(_amltContract);
         adminContract = AMLTAdminInterface(_adminContract);
-    }
-
-    /**
-     * @dev Sell tokens through the fallback function
-     */
-    function()
-        payable
-    {
-        assert(getState() == State.Funding);
-
-        address sender = msg.sender;
-        uint value = msg.value;
-
-        // Check money which buyer sent
-        assert(value >= tokenPrice);
-
-        uint numTokens = value / tokenPrice;
-
-        if (numTokens > tokenCrowdsalePool) {
-            numTokens = tokenCrowdsalePool;
-        }
-
-        if (buyers[totalBuyers] == 0) {
-            buyers[totalBuyers++] = sender;
-        }
-
-        amount[sender] = amount[sender].add(numTokens);
-        tokenCrowdsalePool -= numTokens;
-        LogBuyToken(sender, value, numTokens, tokenPrice);
-
-        refundRemainingETH(sender, value - tokenPrice * numTokens);
-    }
-
-    /**
-     * @dev Refund remaining ETH for buyer
-     */
-    function refundRemainingETH(address _receiver, uint _amount)
-        internal
-    {
-        if (_amount == 0) {
-            return;
-        }
-
-        assert(_receiver.send(_amount));
-    }
-
-    /**
-     * @dev Change price of token
-     * @param _price The new price of token
-     */
-    function changeTokenPrice(uint _price)
-        onlyOperator
-        public
-        returns (bool success)
-    {
-        if (getState() != State.PreFunding) {
-            return false;
-        }
-
-        tokenPrice = _price;
-        LogChangeTokenPrice(_price);
-        return true;
+        amltContract = AMLTInterface(_amltContract);
     }
 
     /**
@@ -127,27 +64,73 @@ contract AMLTCrowdsale is AMLTCrowdsaleInterface {
     }
 
     /**
-     * @dev Change MultiSig Wallet contract
-     * @param _amltMultiSig The new address of MultiSig Wallet contract
+     * @dev Sell tokens through the fallback function
      */
-    function changeMultiSigWallet(address _amltMultiSig)
-        onlyMultiSigWallet
-        public
+    function()
+        payable
     {
-        amltMultiSig = _amltMultiSig;
-        LogChangeMultiSigWallet(_amltMultiSig);
+        assert(getState() == State.Funding);
+
+        address sender = msg.sender;
+        uint value = msg.value;
+
+        // Check money which buyer sent
+        assert(value >= tokenPrice);
+
+        uint numTokens = value / tokenPrice;
+
+        if (numTokens > tokenCrowdsalePool) {
+            numTokens = tokenCrowdsalePool;
+        }
+
+        if (amltAmount[sender] == 0) {
+            buyers[totalBuyers++] = sender;
+        }
+
+        amltAmount[sender] = amltAmount[sender].add(numTokens);
+        tokenCrowdsalePool -= numTokens;
+        LogBuyToken(sender, value, numTokens);
+
+        uint remaining = value - tokenPrice * numTokens;
+
+        if (remaining > 0) {
+            assert(sender.send(remaining));
+        }
     }
 
     /**
-     * @dev Change AMLT contract
-     * @param _amltContract The new address of AMLTAdmin contract
+     * @dev Change price of token
+     * @param _price The new price of token
      */
-    function changeAMLTContract(address _amltContract)
-        onlyMultiSigWallet
+    function changeTokenPrice(uint _price)
         public
+        onlyOperator
+        returns (bool success)
     {
-        amltContract = AMLTInterface(_amltContract);
-        LogChangeAMLTContract(_amltContract);
+        if (getState() != State.PreFunding) {
+            return false;
+        }
+
+        tokenPrice = _price;
+        LogChangeTokenPrice(_price);
+        return true;
+    }
+
+    /**
+     * @dev Move fund get out AMLTCrowdsale contract
+     */
+    function moveFund()
+        public
+        onlyMultiSigWallet
+        returns (bool success)
+    {
+        if (this.balance == 0) {
+            return false;
+        }
+
+        LogMoveFund(msg.sender, this.balance);
+        assert(msg.sender.send(this.balance));
+        return true;
     }
 
     /**
@@ -155,65 +138,76 @@ contract AMLTCrowdsale is AMLTCrowdsaleInterface {
      * @param _adminContract The new address of AMLTAdmin contract
      */
     function changeAMLTAdminContract(address _adminContract)
-        onlyMultiSigWallet
         public
+        onlyMultiSigWallet
     {
         adminContract = AMLTAdminInterface(_adminContract);
         LogChangeAMLTAdminContract(_adminContract);
     }
 
     /**
-     * @dev Move fund get out AMLTCrowdsale contract
+     * @dev Change AMLT contract
+     * @param _amltContract The new address of AMLT contract
      */
-    function moveFund()
-        onlyMultiSigWallet
+    function changeAMLTContract(address _amltContract)
         public
+        onlyMultiSigWallet
     {
-        LogMoveFund(amltMultiSig, this.balance);
-        assert(amltMultiSig.send(this.balance));
+        amltContract = AMLTInterface(_amltContract);
+        LogChangeAMLTContract(_amltContract);
     }
 
+    /**
+     * @dev Refund ETH for buyer who don't pass KYC
+     * @param _buyer The address of buyer
+     */
     function refund(address _buyer)
-        onlyOperator
         public
+        onlyOperator
         returns (bool success)
     {
-        uint numTokens = amount[_buyer];
+        uint numTokens = amltAmount[_buyer];
 
-        if (numTokens == 0) {
+        if (getState() != State.Closed || this.balance == 0 || numTokens == 0) {
             return false;
         }
 
-        amount[_buyer] = 0;
+        amltAmount[_buyer] = 0;
         tokenCrowdsalePool = tokenCrowdsalePool.add(numTokens);
         assert(_buyer.send(numTokens * tokenPrice));
+        LogRefund(_buyer, numTokens * tokenPrice);
         return true;
     }
 
+    /**
+     * @dev Payout token for buyer
+     */
     function payoutToken()
         public
+        onlyOperator
     {
-        // uint current = currentPayoutIndex;
-        // uint len = totalBuyers;
-        // uint count = 0;
+        uint current = currentPayoutIndex;
+        uint len = totalBuyers;
+        uint count = 0;
 
-        // address tmpAddr;
-        // uint tmpAmount;
+        address tmpAddr;
+        uint tmpAmount;
 
-        // for (uint i = current; count < 20 && i < len; i++) {
-        //     tmpAddr = qsdb1.affiliates(i);
-        //     tmpAmount = qsdb1.amount(tmpAddr);
+        for (uint i = current; count < 20 && i < len; i++) {
+            tmpAddr = buyers[i];
+            tmpAmount = amltAmount[tmpAddr];
 
-        //     if (!amlt.transfer(buyers[], tmpAmount)) {
-        //         throw;
-        //     }
+            if (tmpAmount == 0) {
+                assert(amltContract.transfer(tmpAddr, tmpAmount));
+                LogPayoutToken(tmpAddr, tmpAmount);
+            }
 
-        //     count++;
-        // }
+            count++;
+        }
 
-        // if (count != 0) {
-        //     currentDistributedIndex = current + count;
-        // }
+        if (count != 0) {
+            currentPayoutIndex = current + count;
+        }
     }
 
 }
