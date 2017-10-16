@@ -14,13 +14,20 @@ contract AMLTAdmin is AMLTAdminInterface {
         _;
     }
 
+    modifier onlyMultiSigWallet() {
+        require(msg.sender == amltMultiSig);
+        _;
+    }
+
     /**
      * @dev Constructor
      * @param _operator The address of operator
+     * @param _amltMultiSig The address of MultiSig Wallet contract
      */
-    function AMLTAdmin(address _operator)
+    function AMLTAdmin(address _operator, address _amltMultiSig)
     {
         operatorList[_operator] = true;
+        amltMultiSig = _amltMultiSig;
     }
 
     /**
@@ -29,7 +36,7 @@ contract AMLTAdmin is AMLTAdminInterface {
      */
     function addOperator(address _operator)
         public
-        onlyOperator
+        onlyMultiSigWallet
         notNull(_operator)
         returns (bool success)
     {
@@ -48,7 +55,7 @@ contract AMLTAdmin is AMLTAdminInterface {
      */
     function removeOperator(address _operator)
         public
-        onlyOperator
+        onlyMultiSigWallet
         returns (bool success)
     {
         if (!operatorList[_operator]) {
@@ -67,7 +74,7 @@ contract AMLTAdmin is AMLTAdminInterface {
      */
     function replaceOperator(address _oldOperator, address _newOperator)
         public
-        onlyOperator
+        onlyMultiSigWallet
         notNull(_newOperator)
         returns (bool success)
     {
@@ -79,6 +86,118 @@ contract AMLTAdmin is AMLTAdminInterface {
         operatorList[_newOperator] = true;
         LogReplaceOperator(_oldOperator, _newOperator);
         return true;
+    }
+
+    /**
+     * @dev Add new account to whitelist
+     * @param _account The address of new account
+     */
+    function addAccount(address _account)
+        public
+        onlyOperator
+        notNull(_account)
+        returns (bool success)
+    {
+        if (whiteList[_account]) {
+            return false;
+        }
+
+        whiteList[_account] = true;
+        LogAddAccount(_account);
+        return true;
+    }
+
+    /**
+     * @dev Remove account get out whitelist
+     * @param _account The _account address which want to remove
+     */
+    function removeAccount(address _account)
+        public
+        onlyOperator
+        returns (bool success)
+    {
+        if (!whiteList[_account]) {
+            return false;
+        }
+
+        whiteList[_account] = false;
+        LogRemoveAccount(_account);
+        return true;
+    }
+
+    /**
+     * @dev Verify account in whitelist
+     * @param _account The account address which want to verify
+     * @return True if _account is in whitelist
+     */
+    function verifyAccount(address _account)
+        public
+        constant
+        returns (bool inWhitelist)
+    {
+        return whiteList[_account];    
+    }
+
+    /**
+     * @dev Add new account to Network Member list
+     * @param _account The address of new account
+     */
+    function addNetworkMember(address _account)
+        public
+        onlyOperator
+        notNull(_account)
+        returns (bool success)
+    {
+        if (networkMemberList[_account]) {
+            return false;
+        }
+
+        networkMemberList[_account] = true;
+        LogAddNetworkMember(_account);
+        return true;
+    }
+
+    /**
+     * @dev Remove account get out list of Network Member
+     * @param _account The _account address which want to remove
+     */
+    function removeNetworkMember(address _account)
+        public
+        onlyOperator
+        returns (bool success)
+    {
+        if (!networkMemberList[_account]) {
+            return false;
+        }
+
+        networkMemberList[_account] = false;
+        LogRemoveNetworkMember(_account);
+        return true;
+    }
+
+    /**
+     * @dev Verify account in Network Member list
+     * @param _account The account address which want to verify
+     * @return True if _account is in Network Member list
+     */
+    function verifyNetworkMember(address _account)
+        public
+        constant
+        returns (bool inNetworkMemberList)
+    {
+        return networkMemberList[_account];
+    }
+
+    /**
+     * @dev Change MultiSig Wallet contract
+     * @param _amltMultiSig The new address of MultiSig Wallet contract
+     */
+    function changeMultiSigWallet(address _amltMultiSig)
+        public
+        onlyMultiSigWallet
+    {
+        amltMultiSig = _amltMultiSig;
+        LogChangeMultiSigWallet(_amltMultiSig);
     }
 
 }
