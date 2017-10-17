@@ -15,9 +15,9 @@ contract AMLT is AMLTInterface {
      */
     function AMLT(address _presale, address _crowdsale, address _remaining)
     {
-        balanceOf[_presale] = 0;
-        balanceOf[_crowdsale] = 0;
-        balanceOf[_remaining] = 0;
+        balanceOf[_presale] = 150000000 * 10 ** uint(decimals);
+        balanceOf[_crowdsale] = 250000000 * 10 ** uint(decimals);
+        balanceOf[_remaining] = 350000000 * 10 ** uint(decimals);
     }
 
     /**
